@@ -518,7 +518,8 @@ async function iniciarApp() {
     selPartida.appendChild(opt);
   });
 
-  document.getElementById('campoFecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('campoFecha').value = hoy();
+  document.getElementById('campoFecha').max = hoy(); // no permite seleccionar fechas futuras
 
   // Restaurar última selección de zona/activo/instalación
   restaurarUltimo();
@@ -657,6 +658,11 @@ document.addEventListener('click', (e) => {
 });
 
 // ───────── GUARDAR ─────────
+// Fecha de hoy en formato YYYY-MM-DD, usada como valor inicial y límite máximo del campo fecha
+function hoy() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function uuidv4() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
@@ -684,6 +690,7 @@ async function guardarRegistro() {
   const porcentaje = document.getElementById('campoPorcentaje').value;
 
   if (!fecha) return mostrarToast('Falta la fecha.', true);
+  if (fecha > hoy()) return mostrarToast('No se pueden capturar registros con fecha futura.', true);
   if (!idActivo) return mostrarToast('Selecciona un activo.', true);
   if (!idInstalacion) return mostrarToast('Selecciona una instalación.', true);
   if (!idPartida) return mostrarToast('Selecciona una partida.', true);

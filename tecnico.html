@@ -55,6 +55,16 @@
     background: var(--surface); color: var(--text-primary); font-size: 16px;
   }
   .field-input:focus { outline: none; border-color: var(--accent); }
+  .password-wrap { position: relative; }
+  .password-wrap input { padding-right: 44px; }
+  .password-toggle {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    width: 38px; height: 38px; border: none; background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-hint); border-radius: 8px; padding: 0;
+  }
+  .password-toggle:hover { color: var(--text-secondary); background: var(--bg); }
+  .password-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .btn-primary {
     width: 100%; padding: 14px; border-radius: 10px; border: none;
     background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
@@ -204,7 +214,12 @@
     </div>
     <div class="field">
       <label class="field-label">Contraseña</label>
-      <input type="password" id="loginPassword" class="field-input" autocomplete="current-password" placeholder="••••••••">
+      <div class="password-wrap">
+        <input type="password" id="loginPassword" class="field-input" autocomplete="current-password" placeholder="••••••••">
+        <button type="button" class="password-toggle" id="loginPasswordToggle" onclick="togglePasswordVisibility('loginPassword', 'loginPasswordToggle')" aria-label="Mostrar contraseña">
+          <svg id="loginPasswordToggleIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
+      </div>
     </div>
     <button class="btn-primary" id="btnLogin" onclick="hacerLogin()">Entrar</button>
   </div>
@@ -315,6 +330,23 @@ const LS_KEY = 'bmpi_tecnico_sesion';
 const LS_ULTIMO = 'bmpi_tecnico_ultimo';
 
 // ───────── AUTH ─────────
+// Alterna entre mostrar y ocultar el texto de un campo de contraseña.
+// Reutilizable: pasa el id del input y el id del botón que lo controla.
+function togglePasswordVisibility(inputId, btnId) {
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  const icon = btn.querySelector('svg');
+  const mostrando = input.type === 'text';
+
+  input.type = mostrando ? 'password' : 'text';
+  btn.setAttribute('aria-label', mostrando ? 'Mostrar contraseña' : 'Ocultar contraseña');
+
+  // Ojo abierto (mostrar) vs ojo con línea (ocultar)
+  icon.innerHTML = mostrando
+    ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'
+    : '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+}
+
 async function hacerLogin() {
   const idContrato = document.getElementById('loginContrato').value;
   const email = document.getElementById('loginEmail').value.trim();

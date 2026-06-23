@@ -32,6 +32,17 @@
   .main { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 4rem; }
   .section-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-hint); margin-bottom: 12px; margin-top: 2rem; }
 
+  /* PERIODO SELECTOR (filtra todo el dashboard) */
+  .periodo-selector { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2rem; }
+  .periodo-btn {
+    font-size: 13px; font-weight: 500; padding: 7px 16px; border-radius: 20px;
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-secondary);
+    cursor: pointer; font-family: var(--sans);
+  }
+  .periodo-btn:hover { background: var(--bg); }
+  .periodo-btn.active { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+  .periodo-actual { font-size: 12px; color: var(--text-hint); margin-left: 4px; }
+
   /* DOWNLOAD CARDS */
   .download-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 2rem; }
   .download-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; gap: 10px; }
@@ -227,6 +238,15 @@
       <button class="btn-dl btn-secundario" onclick="descargarBaseDatos(null,null)">↓ Todos los registros</button>
     </div>
 
+  </div>
+
+  <div class="section-label">Periodo del panel</div>
+  <div class="periodo-selector">
+    <button class="periodo-btn" id="periodoBtnDia" onclick="abrirModalPeriodoPanel('dia')">Día</button>
+    <button class="periodo-btn" id="periodoBtnSemana" onclick="abrirModalPeriodoPanel('semana')">Semana</button>
+    <button class="periodo-btn" id="periodoBtnMes" onclick="abrirModalPeriodoPanel('mes')">Mes</button>
+    <button class="periodo-btn active" id="periodoBtnGeneral" onclick="aplicarPeriodoPanel(null,null)">General</button>
+    <span class="periodo-actual" id="periodoActualTexto">Mostrando: acumulado (todos los registros)</span>
   </div>
 
   <div class="section-label">Resumen general</div>
@@ -446,11 +466,13 @@ function abrirModalFecha(tipo, modo) {
   }
 
   const ok = document.getElementById('modalBtnOk');
-  const tituloBase = tipo === 'gerencial' ? 'Reporte gerencial' : 'Base de datos';
+  const tituloBase = tipo === 'gerencial' ? 'Reporte gerencial' : tipo === 'bd' ? 'Base de datos' : 'Periodo del panel';
   const modoTexto = modo === 'dia' ? 'por día' : modo === 'semana' ? 'por semana' : 'por mes';
+  const accionTexto = tipo === 'panel' ? 'ver' : 'descargar';
   document.getElementById('modalTitulo').textContent = `${tituloBase} ${modoTexto}`;
-  document.getElementById('modalSub').textContent = `Selecciona ${modo === 'dia' ? 'el día' : modo === 'semana' ? 'la semana' : 'el mes'} que quieres descargar.`;
-  ok.style.background = tipo === 'gerencial' ? '#0F6E56' : '#185FA5';
+  document.getElementById('modalSub').textContent = `Selecciona ${modo === 'dia' ? 'el día' : modo === 'semana' ? 'la semana' : 'el mes'} que quieres ${accionTexto}.`;
+  ok.style.background = tipo === 'gerencial' ? '#0F6E56' : tipo === 'bd' ? '#185FA5' : '#1A1917';
+  ok.textContent = tipo === 'panel' ? 'Aplicar' : 'Descargar';
 
   actualizarConteoModal();
   document.getElementById('modalOverlay').classList.add('open');
@@ -487,7 +509,13 @@ function confirmarDescargaFecha() {
   const tipo = modalTipo, modo = modalModo;
   cerrarModalFecha();
   if (tipo === 'gerencial') descargarGerencial(modo, valor);
-  else descargarBaseDatos(modo, valor);
+  else if (tipo === 'bd') descargarBaseDatos(modo, valor);
+  else if (tipo === 'panel') aplicarPeriodoPanel(modo, valor);
+}
+
+// Atajo usado por los botones Día/Semana/Mes del selector de periodo del panel
+function abrirModalPeriodoPanel(modo) {
+  abrirModalFecha('panel', modo);
 }
 
 document.getElementById('modalOverlay').addEventListener('click', function(e) {
@@ -496,6 +524,8 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) {
 
 // ── CARGA DE DATOS ──
 let barChart = null;
+let periodoPanelModo = null;   // 'dia' | 'semana' | 'mes' | null (null = general/acumulado)
+let periodoPanelValor = null;
 
 async function cargarDatos() {
   try {
@@ -516,6 +546,40 @@ async function cargarDatos() {
     tecnicos.forEach(t => G.tecnicoIdx[t.id] = t);
     partidas.forEach(p => G.partidaIdx[p.id] = p);
     instalaciones.forEach(i => G.instalacionIdx[i.id] = i);
+
+    renderizarDashboard(periodoPanelModo, periodoPanelValor);
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('metricas').innerHTML = `<div class="error-msg">Error al conectar: ${err.message}</div>`;
+  }
+}
+
+// Aplica el filtro de periodo elegido en el selector del panel y vuelve a dibujar todo
+// (métricas, zonas, gráfica y tabla) usando los datos ya cargados en memoria.
+function aplicarPeriodoPanel(modo, valor) {
+  periodoPanelModo = modo;
+  periodoPanelValor = valor;
+
+  document.querySelectorAll('.periodo-btn').forEach(b => b.classList.remove('active'));
+  if (!modo) {
+    document.getElementById('periodoBtnGeneral').classList.add('active');
+  } else if (modo === 'dia') {
+    document.getElementById('periodoBtnDia').classList.add('active');
+  } else if (modo === 'semana') {
+    document.getElementById('periodoBtnSemana').classList.add('active');
+  } else if (modo === 'mes') {
+    document.getElementById('periodoBtnMes').classList.add('active');
+  }
+
+  document.getElementById('periodoActualTexto').textContent = 'Mostrando: ' + etiquetaPeriodo(modo, valor).toLowerCase();
+
+  renderizarDashboard(modo, valor);
+}
+
+function renderizarDashboard(modo, valor) {
+    const registros = filtrarPorPeriodo(modo, valor);
+    const zonas = G.zonas, activos = G.activos, tecnicos = G.tecnicos;
 
     const montoActivo = {}, contActivo = {};
     activos.forEach(a => { montoActivo[a.id] = 0; contActivo[a.id] = 0; });
@@ -626,11 +690,6 @@ async function cargarDatos() {
     }
 
     document.getElementById('timestamp-footer').textContent = 'Actualizado: ' + new Date().toLocaleString('es-MX');
-
-  } catch (err) {
-    console.error(err);
-    document.getElementById('metricas').innerHTML = `<div class="error-msg">Error al conectar: ${err.message}</div>`;
-  }
 }
 
 // ── EXCEL: REPORTE GERENCIAL ──

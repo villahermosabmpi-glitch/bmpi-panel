@@ -200,8 +200,8 @@
       </select>
     </div>
     <div class="field">
-      <label class="field-label">Correo</label>
-      <input type="email" id="loginEmail" class="field-input" autocomplete="username" placeholder="tecnico@bmpi.com">
+      <label class="field-label">Usuario</label>
+      <input type="text" id="loginUsuario" class="field-input" autocomplete="username" placeholder="JJIMROM" autocapitalize="characters" style="text-transform:uppercase;">
     </div>
     <div class="field">
       <label class="field-label">Contraseña</label>
@@ -339,7 +339,7 @@ function togglePasswordVisibility(inputId, btnId) {
 
 async function hacerLogin() {
   const idContrato = document.getElementById('loginContrato').value;
-  const email = document.getElementById('loginEmail').value.trim();
+  const usuario = document.getElementById('loginUsuario').value.trim().toUpperCase();
   const password = document.getElementById('loginPassword').value;
   const errEl = document.getElementById('loginError');
   const btn = document.getElementById('btnLogin');
@@ -350,8 +350,8 @@ async function hacerLogin() {
     errEl.classList.add('show');
     return;
   }
-  if (!email || !password) {
-    errEl.textContent = 'Ingresa correo y contraseña.';
+  if (!usuario || !password) {
+    errEl.textContent = 'Ingresa tu usuario y contraseña.';
     errEl.classList.add('show');
     return;
   }
@@ -360,13 +360,27 @@ async function hacerLogin() {
   btn.innerHTML = '<span class="spinner-inline"></span> Entrando...';
 
   try {
+    // Paso 1: traducir el usuario corto al correo interno que Supabase Auth necesita.
+    // Esta consulta usa la anon key sin sesión (lectura pública limitada solo a
+    // usuario+correo_electronico, ver política RLS "login_lectura_usuario").
+    const busq = await fetch(
+      `${SUPA_URL}/rest/v1/tecnicos?select=correo_electronico&usuario=eq.${encodeURIComponent(usuario)}`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+    );
+    const filas = await busq.json();
+    if (!busq.ok || !filas.length || !filas[0].correo_electronico) {
+      throw new Error('Usuario no encontrado.');
+    }
+    const email = filas[0].correo_electronico;
+
+    // Paso 2: autenticar normalmente con el correo interno resuelto.
     const r = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
       headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     const data = await r.json();
-    if (!r.ok) throw new Error(data.error_description || data.msg || 'Credenciales incorrectas');
+    if (!r.ok) throw new Error('Usuario o contraseña incorrectos.');
 
     sesion = { access_token: data.access_token, refresh_token: data.refresh_token, user: data.user };
     contratoSeleccionado = G.contratos.find(c => String(c.id) === String(idContrato));
@@ -387,7 +401,7 @@ function hacerLogout() {
   sesion = null;
   document.getElementById('pantallaApp').classList.remove('show');
   document.getElementById('pantallaLogin').style.display = 'flex';
-  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginUsuario').value = '';
   document.getElementById('loginPassword').value = '';
 }
 

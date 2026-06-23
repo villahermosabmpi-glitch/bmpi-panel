@@ -135,6 +135,12 @@
   .btn-guardar:disabled { opacity: 0.4; }
 
   .hint { font-size: 12px; color: var(--text-hint); margin-top: 4px; }
+  .cantidad-wrap { position: relative; }
+  .cantidad-wrap input { padding-right: 52px; }
+  .cantidad-unidad {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    font-size: 14px; font-weight: 600; color: var(--text-secondary); pointer-events: none;
+  }
 
   /* Historial */
   .historial-item {
@@ -248,7 +254,7 @@
         </div>
         <div class="field">
           <label class="field-label">Partida</label>
-          <select id="campoPartida" class="field-input">
+          <select id="campoPartida" class="field-input" onchange="onPartidaChange()">
             <option value="">Selecciona…</option>
           </select>
         </div>
@@ -256,7 +262,11 @@
 
       <div class="field">
         <label class="field-label">Cantidad</label>
-        <input type="number" id="campoCantidad" class="field-input" placeholder="0" step="0.01" min="0" inputmode="decimal">
+        <div class="cantidad-wrap">
+          <input type="number" id="campoCantidad" class="field-input" placeholder="0" step="1" min="0" inputmode="decimal">
+          <span class="cantidad-unidad" id="campoCantidadUnidad"></span>
+        </div>
+        <div class="hint" id="campoCantidadHint"></div>
       </div>
 
       <div class="field">
@@ -442,7 +452,7 @@ async function iniciarApp() {
     q('zonas', 'select=id,nombre&order=id'),
     q('activos', 'select=id,nombre,id_zona&activo=eq.true&order=nombre'),
     q('instalaciones', 'select=id,nombre,id_activo&activo=eq.true&order=nombre'),
-    q('partidas_precios', 'select=id,codigo_partida,concepto_pnd&order=codigo_partida')
+    q('partidas_precios', 'select=id,codigo_partida,concepto_pnd,unidad_medida&order=codigo_partida')
   ]);
   G.zonas = zonas; G.activos = activos; G.instalaciones = instalaciones; G.partidas = partidas;
 
@@ -509,6 +519,49 @@ function onActivoChange() {
   }
   txt.disabled = false;
   txt.placeholder = 'Escribe para buscar…';
+}
+
+// Unidades que se capturan como número entero (servicio/prueba/muestra).
+// Todo lo que no esté en esta lista (metro cuadrado, metro lineal, etc.) admite decimales.
+const UNIDADES_ENTERAS = ['SERVICIO', 'PRUEBA', 'MUESTRA'];
+
+// Sufijos visuales para unidades de medida comunes
+const SUFIJOS_UNIDAD = {
+  'METRO CUADRADO': 'm²',
+  'METRO LINEAL': 'm',
+};
+
+function onPartidaChange() {
+  const idPartida = document.getElementById('campoPartida').value;
+  const campoCantidad = document.getElementById('campoCantidad');
+  const sufijoEl = document.getElementById('campoCantidadUnidad');
+  const hintEl = document.getElementById('campoCantidadHint');
+
+  const partida = G.partidas.find(p => String(p.id) === String(idPartida));
+  if (!partida || !partida.unidad_medida) {
+    campoCantidad.step = '1';
+    sufijoEl.textContent = '';
+    hintEl.textContent = '';
+    return;
+  }
+
+  const unidad = partida.unidad_medida.trim().toUpperCase();
+  const esEntero = UNIDADES_ENTERAS.includes(unidad);
+
+  if (esEntero) {
+    campoCantidad.step = '1';
+    // Si ya había un decimal cargado, lo redondeamos al cambiar de partida
+    if (campoCantidad.value && campoCantidad.value.includes('.')) {
+      campoCantidad.value = Math.round(Number(campoCantidad.value));
+    }
+  } else {
+    campoCantidad.step = '0.01';
+  }
+
+  sufijoEl.textContent = SUFIJOS_UNIDAD[unidad] || '';
+  hintEl.textContent = esEntero
+    ? `Unidad: ${partida.unidad_medida} (cantidad entera)`
+    : `Unidad: ${partida.unidad_medida} (admite decimales)`;
 }
 
 function limpiarInstalacion() {
@@ -598,6 +651,14 @@ async function guardarRegistro() {
   if (!cantidad || Number(cantidad) <= 0) return mostrarToast('Ingresa una cantidad válida.', true);
   if (!pctSeleccionado) return mostrarToast('Selecciona el porcentaje de avance.', true);
 
+  const partidaElegida = G.partidas.find(p => String(p.id) === String(idPartida));
+  if (partidaElegida && partidaElegida.unidad_medida) {
+    const unidad = partidaElegida.unidad_medida.trim().toUpperCase();
+    if (UNIDADES_ENTERAS.includes(unidad) && !Number.isInteger(Number(cantidad))) {
+      return mostrarToast(`La unidad "${partidaElegida.unidad_medida}" requiere una cantidad entera.`, true);
+    }
+  }
+
   const btn = document.getElementById('btnGuardar');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-inline"></span> Guardando...';
@@ -636,6 +697,8 @@ async function guardarRegistro() {
     document.getElementById('campoUdc').value = '';
     document.getElementById('campoPartida').value = '';
     document.getElementById('campoCantidad').value = '';
+    document.getElementById('campoCantidadUnidad').textContent = '';
+    document.getElementById('campoCantidadHint').textContent = '';
     pctSeleccionado = null;
     document.querySelectorAll('.pct-btn').forEach(b => b.classList.remove('active'));
 

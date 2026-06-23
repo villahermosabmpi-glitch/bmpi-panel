@@ -504,6 +504,7 @@ async function iniciarApp() {
   G.zonas = zonas; G.activos = activos; G.instalaciones = instalaciones; G.partidas = partidas;
 
   const selZona = document.getElementById('campoZona');
+  selZona.innerHTML = '<option value="">Selecciona…</option>';
   zonas.forEach(z => {
     const opt = document.createElement('option');
     opt.value = z.id; opt.textContent = 'Zona ' + z.nombre;
@@ -511,6 +512,7 @@ async function iniciarApp() {
   });
 
   const selPartida = document.getElementById('campoPartida');
+  selPartida.innerHTML = '<option value="">Selecciona…</option>';
   partidas.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p.id;
@@ -658,9 +660,15 @@ document.addEventListener('click', (e) => {
 });
 
 // ───────── GUARDAR ─────────
-// Fecha de hoy en formato YYYY-MM-DD, usada como valor inicial y límite máximo del campo fecha
+// Fecha de hoy en formato YYYY-MM-DD, en hora LOCAL del dispositivo (no UTC).
+// Usar .toISOString() aquí sería un error: convierte a UTC y puede regresar
+// el día anterior según la hora del día y la zona horaria del técnico.
 function hoy() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
 }
 
 function uuidv4() {

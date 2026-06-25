@@ -163,6 +163,7 @@
   .historial-main { min-width: 0; }
   .historial-inst { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .historial-meta { font-size: 12px; color: var(--text-hint); margin-top: 2px; }
+  .historial-obs { font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-style: italic; }
   .historial-pct {
     font-size: 12px; font-weight: 600; font-family: var(--mono); padding: 3px 9px;
     border-radius: 20px; flex-shrink: 0;
@@ -293,6 +294,11 @@
           <span class="cantidad-unidad">%</span>
         </div>
         <div class="hint">Solo es informativo, no afecta el monto calculado.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Observaciones (opcional)</label>
+        <textarea id="campoObservaciones" class="field-input" rows="3" placeholder="Notas sobre esta actividad…" style="resize:vertical; font-family:inherit;"></textarea>
       </div>
 
       <button class="btn-guardar" id="btnGuardar" onclick="guardarRegistro()">Guardar registro</button>
@@ -571,9 +577,10 @@ function onActivoChange() {
   txt.placeholder = 'Escribe para buscar…';
 }
 
-// Unidades que se capturan como número entero (servicio/prueba/muestra).
-// Todo lo que no esté en esta lista (metro cuadrado, metro lineal, etc.) admite decimales.
-const UNIDADES_ENTERAS = ['SERVICIO', 'PRUEBA', 'MUESTRA'];
+// Unidades que se capturan como número entero (prueba/muestra).
+// Servicio ahora admite decimales (ej. 0.5). Todo lo demás (metro cuadrado,
+// metro lineal, etc.) también admite decimales.
+const UNIDADES_ENTERAS = ['PRUEBA', 'MUESTRA'];
 
 // Sufijos visuales para unidades de medida comunes
 const SUFIJOS_UNIDAD = {
@@ -696,6 +703,7 @@ async function guardarRegistro() {
   const idPartida = document.getElementById('campoPartida').value;
   const cantidad = document.getElementById('campoCantidad').value;
   const porcentaje = document.getElementById('campoPorcentaje').value;
+  const observaciones = document.getElementById('campoObservaciones').value.trim();
 
   if (!fecha) return mostrarToast('Falta la fecha.', true);
   if (fecha > hoy()) return mostrarToast('No se pueden capturar registros con fecha futura.', true);
@@ -730,6 +738,7 @@ async function guardarRegistro() {
       id_partida: Number(idPartida),
       cantidad: Number(cantidad),
       porcentaje_avance: Number(porcentaje),
+      observaciones: observaciones || null,
       id_contrato: contratoSeleccionado ? contratoSeleccionado.id : null
     };
 
@@ -756,6 +765,7 @@ async function guardarRegistro() {
     document.getElementById('campoCantidadUnidad').textContent = '';
     document.getElementById('campoCantidadHint').textContent = '';
     document.getElementById('campoPorcentaje').value = '';
+    document.getElementById('campoObservaciones').value = '';
 
     cargarHistorial();
   } catch (err) {
@@ -794,7 +804,7 @@ async function cargarHistorial() {
   const cont = document.getElementById('historialLista');
   try {
     const regs = await q('registros_campo',
-      `select=id,fecha,id_activo,id_instalacion,id_partida,cantidad,porcentaje_avance,creado_el&order=creado_el.desc&limit=10`);
+      `select=id,fecha,id_activo,id_instalacion,id_partida,cantidad,porcentaje_avance,observaciones,creado_el&order=creado_el.desc&limit=10`);
 
     if (regs.length === 0) {
       cont.innerHTML = '<div class="historial-empty">Sin registros todavía</div>';
@@ -808,10 +818,14 @@ async function cargarHistorial() {
       const pct = Number(r.porcentaje_avance || 0);
       const pctColor = pct === 100 ? 'var(--ok)' : pct >= 50 ? 'var(--accent)' : 'var(--warn)';
       const pctBg = pct === 100 ? 'var(--ok-light)' : pct >= 50 ? 'var(--accent-light)' : 'var(--warn-light)';
+      const obsHtml = r.observaciones
+        ? `<div class="historial-obs">📝 ${r.observaciones}</div>`
+        : '';
       return `<div class="historial-item">
         <div class="historial-main">
           <div class="historial-inst">${inst ? inst.nombre : 'Instalación #' + r.id_instalacion}</div>
           <div class="historial-meta">${r.fecha} · ${activo ? activo.nombre : ''} · ${partida ? partida.codigo_partida : ''} · ${r.cantidad}</div>
+          ${obsHtml}
         </div>
         <span class="historial-pct" style="background:${pctBg};color:${pctColor}">${pct}%</span>
       </div>`;

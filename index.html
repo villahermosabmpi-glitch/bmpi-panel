@@ -242,11 +242,11 @@
 
   <div class="section-label">Periodo del panel</div>
   <div class="periodo-selector">
-    <button class="periodo-btn" id="periodoBtnDia" onclick="abrirModalPeriodoPanel('dia')">Día</button>
+    <button class="periodo-btn active" id="periodoBtnDia" onclick="abrirModalPeriodoPanel('dia')">Día</button>
     <button class="periodo-btn" id="periodoBtnSemana" onclick="abrirModalPeriodoPanel('semana')">Semana</button>
     <button class="periodo-btn" id="periodoBtnMes" onclick="abrirModalPeriodoPanel('mes')">Mes</button>
-    <button class="periodo-btn active" id="periodoBtnGeneral" onclick="aplicarPeriodoPanel(null,null)">General</button>
-    <span class="periodo-actual" id="periodoActualTexto">Mostrando: acumulado (todos los registros)</span>
+    <button class="periodo-btn" id="periodoBtnGeneral" onclick="aplicarPeriodoPanel(null,null)">General</button>
+    <span class="periodo-actual" id="periodoActualTexto">Mostrando: cargando…</span>
   </div>
 
   <div class="section-label">Resumen general</div>
@@ -387,7 +387,15 @@ function fmt(n) {
   return '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits:2, maximumFractionDigits:2 });
 }
 
-function hoy() { return new Date().toISOString().slice(0,10); }
+// Fecha de hoy en formato YYYY-MM-DD, en hora LOCAL (no UTC, evita el
+// desfase de un día según la hora y zona horaria del dispositivo).
+function hoy() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
 
 // ISO week helpers: 'YYYY-Www' <-> rango de fechas
 function isoWeekToRange(isoWeekStr) {
@@ -524,8 +532,8 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) {
 
 // ── CARGA DE DATOS ──
 let barChart = null;
-let periodoPanelModo = null;   // 'dia' | 'semana' | 'mes' | null (null = general/acumulado)
-let periodoPanelValor = null;
+let periodoPanelModo = 'dia';   // 'dia' | 'semana' | 'mes' | null (null = general/acumulado)
+let periodoPanelValor = hoy();  // Por default el panel abre mostrando el día de hoy
 
 async function cargarDatos() {
   try {
@@ -547,6 +555,7 @@ async function cargarDatos() {
     partidas.forEach(p => G.partidaIdx[p.id] = p);
     instalaciones.forEach(i => G.instalacionIdx[i.id] = i);
 
+    document.getElementById('periodoActualTexto').textContent = 'Mostrando: ' + etiquetaPeriodo(periodoPanelModo, periodoPanelValor).toLowerCase();
     renderizarDashboard(periodoPanelModo, periodoPanelValor);
 
   } catch (err) {
@@ -766,7 +775,7 @@ function descargarBaseDatos(modo, valor) {
   const regs = filtrarPorPeriodo(modo, valor);
   const labelArchivo = valor ? valor.replace(/[^0-9A-Za-z-]/g, '') : 'todos';
 
-  const encabezado = ['FECHA','TÉCNICO','NUM. COLABORADOR','ZONA','ACTIVO','INSTALACIÓN','UDC','CÓDIGO PARTIDA','DESCRIPCIÓN PARTIDA','UNIDAD DE MEDIDA','PRECIO UNITARIO','VOLUMEN GENERADO','PORCENTAJE ACUMULADO','MONTO'];
+  const encabezado = ['FECHA','TÉCNICO','NUM. COLABORADOR','ZONA','ACTIVO','INSTALACIÓN','UDC','CÓDIGO PARTIDA','DESCRIPCIÓN PARTIDA','UNIDAD DE MEDIDA','PRECIO UNITARIO','VOLUMEN GENERADO','PORCENTAJE ACUMULADO','MONTO','OBSERVACIONES'];
 
   const filas = regs.map(r => {
     const tec = G.tecnicoIdx[r.id_tecnico] || {};
@@ -780,6 +789,7 @@ function descargarBaseDatos(modo, valor) {
       part.concepto_pnd || '', part.unidad_medida || '',
       Number(r.precio_congelado || 0), Number(r.cantidad || 0),
       Number(r.porcentaje_avance || 0) / 100, Number(r.monto || 0),
+      r.observaciones || '',
     ];
   });
 
@@ -787,7 +797,7 @@ function descargarBaseDatos(modo, valor) {
   const colMoneda = [10, 13];   // Precio unitario, Monto
   const colCantidad = 11;        // Volumen generado (no es dinero)
   const colPct = 12;             // Porcentaje acumulado
-  const UNIDADES_ENTERAS = ['SERVICIO', 'PRUEBA', 'MUESTRA'];
+  const UNIDADES_ENTERAS = ['PRUEBA', 'MUESTRA'];
 
   if (filas.length > 0) {
     for (let R = 1; R <= filas.length; R++) {
@@ -807,7 +817,7 @@ function descargarBaseDatos(modo, valor) {
       if (ws[addrPct] && typeof ws[addrPct].v === 'number') ws[addrPct].z = '0%';
     }
   }
-  ws['!cols'] = [{wch:12},{wch:28},{wch:14},{wch:12},{wch:22},{wch:30},{wch:10},{wch:14},{wch:35},{wch:14},{wch:14},{wch:16},{wch:14},{wch:14}];
+  ws['!cols'] = [{wch:12},{wch:28},{wch:14},{wch:12},{wch:22},{wch:30},{wch:10},{wch:14},{wch:35},{wch:14},{wch:14},{wch:16},{wch:14},{wch:14},{wch:35}];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Registros');

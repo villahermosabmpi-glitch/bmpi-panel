@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel de Control · BMPI Villahermosa</title>
+
+<!-- PWA: permite instalar este panel como app en el celular -->
+<link rel="manifest" href="manifest-admin.json">
+<meta name="theme-color" content="#1B2C58">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- iOS: Safari no lee manifest.json igual que Android, necesita estas etiquetas aparte -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BMPI Admin">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -825,6 +836,13 @@ function descargarBaseDatos(modo, valor) {
 }
 
 // cargarDatos() se llama después de un login exitoso, ver hacerLoginAdmin()
+
+// ───────── PWA: registrar service worker ─────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw-admin.js').catch(() => { /* silencioso: no es crítico */ });
+  });
+}
 </script>
 </div> <!-- cierre #pantallaPanel -->
 </body>

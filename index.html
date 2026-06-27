@@ -613,6 +613,24 @@ function renderizarDashboard(modo, valor) {
     activos.forEach(a => { montoZona[a.id_zona] = (montoZona[a.id_zona] || 0) + (montoActivo[a.id] || 0); });
     const totalGeneral = Object.values(montoZona).reduce((s, v) => s + v, 0);
 
+    // Tarjeta de técnicos: en modo "día" mostramos quién FALTA por capturar hoy,
+    // no la lista completa de técnicos activos. En otros modos (semana/mes/general)
+    // se mantiene el comportamiento original (lista completa de técnicos activos).
+    const idsConRegistro = new Set(registros.map(r => r.id_tecnico));
+    const tecnicosPendientes = tecnicos.filter(t => !idsConRegistro.has(t.id));
+    const esModoDia = modo === 'dia';
+
+    const tituloTarjetaTecnicos = esModoDia ? 'Pendientes de hoy' : 'Técnicos activos';
+    const listaTecnicosTarjeta = esModoDia ? tecnicosPendientes : tecnicos;
+    const valorTarjetaTecnicos = esModoDia
+      ? `${tecnicosPendientes.length}/${tecnicos.length}`
+      : tecnicos.length;
+    const subTarjetaTecnicos = esModoDia
+      ? (tecnicosPendientes.length === 0
+          ? 'Todos los técnicos ya capturaron hoy ✓'
+          : listaTecnicosTarjeta.map(t => t.nombre_completo || t.num_colaborador).join(', '))
+      : (listaTecnicosTarjeta.map(t => t.nombre_completo || t.num_colaborador).join(', ') || '—');
+
     document.getElementById('metricas').innerHTML = `
       <div class="metric-card">
         <div class="metric-label">Monto total ejecutado</div>
@@ -626,9 +644,9 @@ function renderizarDashboard(modo, valor) {
         <div class="metric-sub">${totalGeneral > 0 ? ((montoZona[z.id]/totalGeneral)*100).toFixed(1) : '0.0'}% del total</div>
       </div>`).join('')}
       <div class="metric-card">
-        <div class="metric-label">Técnicos activos</div>
-        <div class="metric-value">${tecnicos.length}</div>
-        <div class="metric-sub">${tecnicos.map(t => t.nombre_completo || t.num_colaborador).join(', ') || '—'}</div>
+        <div class="metric-label">${tituloTarjetaTecnicos}</div>
+        <div class="metric-value"${esModoDia && tecnicosPendientes.length === 0 ? ' style="color:var(--sur)"' : ''}>${valorTarjetaTecnicos}</div>
+        <div class="metric-sub">${subTarjetaTecnicos}</div>
       </div>`;
 
     document.getElementById('zonas').innerHTML = zonas.map(z => {

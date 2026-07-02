@@ -588,6 +588,15 @@ const SUFIJOS_UNIDAD = {
   'METRO LINEAL': 'm',
 };
 
+// Detecta si una partida es de "Inspección visual" sin importar
+// mayúsculas, acentos o palabras adicionales en la descripción.
+function esInspeccionVisual(concepto) {
+  if (!concepto) return false;
+  const normalizado = concepto.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // quita acentos
+  return normalizado.includes('inspeccion') && normalizado.includes('visual');
+}
+
 function onPartidaChange() {
   const idPartida = document.getElementById('campoPartida').value;
   const campoCantidad = document.getElementById('campoCantidad');
@@ -597,6 +606,7 @@ function onPartidaChange() {
   const partida = G.partidas.find(p => String(p.id) === String(idPartida));
   if (!partida || !partida.unidad_medida) {
     campoCantidad.step = '1';
+    campoCantidad.max = '';
     sufijoEl.textContent = '';
     hintEl.textContent = '';
     return;
@@ -604,10 +614,22 @@ function onPartidaChange() {
 
   const unidad = partida.unidad_medida.trim().toUpperCase();
   const esEntero = UNIDADES_ENTERAS.includes(unidad);
+  const esInspVisual = esInspeccionVisual(partida.concepto_pnd);
 
+  // Inspección visual: decimales permitidos pero máximo 1
+  if (esInspVisual) {
+    campoCantidad.step = '0.01';
+    campoCantidad.max = '1';
+    if (Number(campoCantidad.value) > 1) campoCantidad.value = '1';
+    sufijoEl.textContent = SUFIJOS_UNIDAD[unidad] || '';
+    hintEl.textContent = `Inspección visual: máximo 1 (admite decimales como 0.5)`;
+    return;
+  }
+
+  // Regla normal de unidades enteras
+  campoCantidad.max = ''; // sin límite máximo
   if (esEntero) {
     campoCantidad.step = '1';
-    // Si ya había un decimal cargado, lo redondeamos al cambiar de partida
     if (campoCantidad.value && campoCantidad.value.includes('.')) {
       campoCantidad.value = Math.round(Number(campoCantidad.value));
     }
@@ -720,6 +742,9 @@ async function guardarRegistro() {
     const unidad = partidaElegida.unidad_medida.trim().toUpperCase();
     if (UNIDADES_ENTERAS.includes(unidad) && !Number.isInteger(Number(cantidad))) {
       return mostrarToast(`La unidad "${partidaElegida.unidad_medida}" requiere una cantidad entera.`, true);
+    }
+    if (esInspeccionVisual(partidaElegida.concepto_pnd) && Number(cantidad) > 1) {
+      return mostrarToast('Las partidas de Inspección visual tienen cantidad máxima de 1.', true);
     }
   }
 

@@ -29,6 +29,53 @@
   }
   body { background: var(--bg); font-family: var(--sans); font-size: 14px; color: var(--text-primary); min-height: 100vh; }
 
+  /* ── MATRIZ DE CRUCE ── */
+  .matriz-tab {
+    font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--border-strong); background: var(--surface);
+    color: var(--text-secondary); cursor: pointer; font-family: var(--sans);
+    transition: background 0.15s, color 0.15s;
+  }
+  .matriz-tab:hover { background: var(--bg); }
+  .matriz-tab.active { background: #1A1917; color: #fff; border-color: #1A1917; }
+
+  .matriz-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .matriz-table { border-collapse: collapse; font-size: 12px; min-width: 100%; }
+  .matriz-table th {
+    background: var(--bg); padding: 7px 10px; text-align: left;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.04em;
+    color: var(--text-secondary); border-bottom: 1px solid var(--border);
+    white-space: nowrap; position: sticky; top: 0;
+  }
+  .matriz-table th.partida-col { text-align: center; max-width: 90px; white-space: normal; word-break: break-word; }
+  .matriz-table td {
+    padding: 6px 10px; border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .matriz-table tr:last-child td { border-bottom: none; }
+  .matriz-table tr:hover td { background: var(--bg); }
+  .matriz-table td.row-label { font-weight: 500; white-space: nowrap; min-width: 130px; }
+  .matriz-table td.cell-data { text-align: center; min-width: 80px; }
+  .matriz-table td.cell-empty { text-align: center; color: var(--text-hint); font-size: 11px; }
+  .cell-monto { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text-primary); display: block; }
+  .cell-vol   { font-family: var(--mono); font-size: 10px; color: var(--text-hint); display: block; }
+  .total-row td { background: var(--bg); font-weight: 600; border-top: 2px solid var(--border-strong); }
+  .total-col { background: #f0ede8 !important; font-weight: 600; }
+
+  /* Desglose de partida */
+  .desglose-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .desglose-table th {
+    background: var(--bg); padding: 8px 12px; text-align: left;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.04em; color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+  }
+  .desglose-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .desglose-table tr:last-child td { border-bottom: none; }
+  .desglose-table tr:hover td { background: var(--bg); }
+  .desglose-table .total-row td { background: var(--bg); font-weight: 600; border-top: 2px solid var(--border-strong); }
+  .bar-mini-track { height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; min-width: 60px; }
+  .bar-mini-fill  { height: 4px; border-radius: 2px; background: var(--norte-mid); }
+
   .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
   .topbar-left { display: flex; align-items: center; gap: 12px; }
   .logo-mark { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--border); padding: 4px; overflow: hidden; } .logo-mark img { width: 100%; height: 100%; object-fit: contain; }
@@ -291,6 +338,55 @@
     <div id="tabla-registros">
       <div class="loading"><div class="spinner"></div> Cargando...</div>
     </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECCIÓN: ANÁLISIS POR PARTIDA
+  ══════════════════════════════════════════════════════════ -->
+  <div class="section-label" style="margin-top:2.5rem">ANÁLISIS POR PARTIDA</div>
+
+  <div class="table-card" id="card-desglose-partida">
+    <div class="table-header">
+      <span class="table-title">Desglose por partida</span>
+      <span id="partida-total-label" style="font-size:12px;color:var(--text-hint)"></span>
+    </div>
+    <div id="tabla-desglose-partida"><div class="loading"><div class="spinner"></div> Cargando…</div></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECCIÓN: MATRICES DE CRUCE
+  ══════════════════════════════════════════════════════════ -->
+  <div class="section-label" style="margin-top:2.5rem">MATRICES DE CRUCE</div>
+
+  <!-- Tabs para alternar entre las 3 matrices -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <button class="matriz-tab active" id="tabTecnico"   onclick="switchMatriz('tecnico')">Técnico × Partida</button>
+    <button class="matriz-tab"        id="tabActivo"    onclick="switchMatriz('activo')">Activo × Partida</button>
+    <button class="matriz-tab"        id="tabInstalacion" onclick="switchMatriz('instalacion')">Instalación × Partida</button>
+  </div>
+
+  <div class="table-card" id="card-matriz-tecnico">
+    <div class="table-header">
+      <span class="table-title">Técnico × Partida</span>
+      <span style="font-size:11px;color:var(--text-hint)">Monto / Volumen por técnico y partida</span>
+    </div>
+    <div id="tabla-matriz-tecnico"><div class="loading"><div class="spinner"></div> Cargando…</div></div>
+  </div>
+
+  <div class="table-card" id="card-matriz-activo" style="display:none">
+    <div class="table-header">
+      <span class="table-title">Activo × Partida</span>
+      <span style="font-size:11px;color:var(--text-hint)">Monto / Volumen por activo y partida</span>
+    </div>
+    <div id="tabla-matriz-activo"><div class="loading"><div class="spinner"></div> Cargando…</div></div>
+  </div>
+
+  <div class="table-card" id="card-matriz-instalacion" style="display:none">
+    <div class="table-header">
+      <span class="table-title">Instalación × Partida</span>
+      <span style="font-size:11px;color:var(--text-hint)">Monto / Volumen por instalación y partida</span>
+    </div>
+    <div id="tabla-matriz-instalacion"><div class="loading"><div class="spinner"></div> Cargando…</div></div>
   </div>
 
   <div class="footer">
@@ -728,6 +824,12 @@ function renderizarDashboard(modo, valor) {
     }
 
     document.getElementById('timestamp-footer').textContent = 'Actualizado: ' + new Date().toLocaleString('es-MX');
+
+    // ── Secciones de análisis (respetan el mismo filtro de período) ──
+    renderizarDesglosePartida(registros);
+    renderizarMatrizTecnico(registros);
+    renderizarMatrizActivo(registros);
+    renderizarMatrizInstalacion(registros);
 }
 
 // ── EXCEL: REPORTE GERENCIAL ──
@@ -851,6 +953,225 @@ function descargarBaseDatos(modo, valor) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Registros');
   XLSX.writeFile(wb, `BaseDatos_BMPI_${labelArchivo}.xlsx`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANÁLISIS POR PARTIDA Y MATRICES DE CRUCE
+// Se llaman desde renderizarDashboard() después de actualizar la tabla principal.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let matrizActiva = 'tecnico'; // 'tecnico' | 'activo' | 'instalacion'
+
+function switchMatriz(tipo) {
+  matrizActiva = tipo;
+  ['tecnico','activo','instalacion'].forEach(t => {
+    document.getElementById('tabTecnico').classList.toggle('active', t === 'tecnico' && tipo === 'tecnico');
+    document.getElementById('tabActivo').classList.toggle('active', t === 'activo' && tipo === 'activo');
+    document.getElementById('tabInstalacion').classList.toggle('active', t === 'instalacion' && tipo === 'instalacion');
+    document.getElementById(`card-matriz-${t}`).style.display = (t === tipo) ? '' : 'none';
+  });
+}
+
+// ── 1. DESGLOSE POR PARTIDA ─────────────────────────────────────────────────
+function renderizarDesglosePartida(registros) {
+  const el = document.getElementById('tabla-desglose-partida');
+  const lbl = document.getElementById('partida-total-label');
+
+  if (registros.length === 0) {
+    el.innerHTML = '<div class="loading">Sin registros en este período</div>';
+    lbl.textContent = '';
+    return;
+  }
+
+  // Acumular por partida
+  const map = {};
+  registros.forEach(r => {
+    const pid = r.id_partida;
+    if (!map[pid]) map[pid] = { monto: 0, volumen: 0 };
+    map[pid].monto   += Number(r.monto || 0);
+    map[pid].volumen += Number(r.cantidad || 0);
+  });
+
+  const totalMonto = Object.values(map).reduce((s, v) => s + v.monto, 0);
+  const totalVol   = Object.values(map).reduce((s, v) => s + v.volumen, 0);
+  const maxMonto   = Math.max(...Object.values(map).map(v => v.monto), 1);
+
+  // Ordenar por monto desc
+  const partidas = Object.entries(map)
+    .sort((a, b) => b[1].monto - a[1].monto)
+    .map(([pid, vals]) => ({ pid, ...vals, info: G.partidaIdx[pid] || {} }));
+
+  lbl.textContent = `${partidas.length} partida${partidas.length!==1?'s':''} con actividad`;
+
+  const filas = partidas.map(p => {
+    const pct = totalMonto > 0 ? (p.monto / totalMonto * 100) : 0;
+    const barPct = p.monto / maxMonto * 100;
+    const unidad = p.info.unidad_medida || '';
+    return `<tr>
+      <td class="mono" style="white-space:nowrap">${p.info.codigo_partida||'—'}</td>
+      <td style="max-width:260px">${p.info.concepto_pnd||'—'}</td>
+      <td style="text-align:center;white-space:nowrap">${unidad}</td>
+      <td class="mono" style="text-align:right;white-space:nowrap">${Number(p.volumen).toLocaleString('es-MX',{maximumFractionDigits:2})}</td>
+      <td class="mono" style="text-align:right;white-space:nowrap;font-weight:500">${fmt(p.monto)}</td>
+      <td style="min-width:120px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="bar-mini-track" style="flex:1"><div class="bar-mini-fill" style="width:${barPct}%"></div></div>
+          <span style="font-size:11px;color:var(--text-secondary);white-space:nowrap;font-family:var(--mono)">${pct.toFixed(1)}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<div style="overflow-x:auto"><table class="desglose-table">
+    <thead><tr>
+      <th>Código</th><th>Descripción</th><th style="text-align:center">Unidad</th>
+      <th style="text-align:right">Volumen</th><th style="text-align:right">Monto</th><th>% del total</th>
+    </tr></thead>
+    <tbody>${filas}</tbody>
+    <tfoot><tr class="total-row">
+      <td colspan="3"><strong>TOTAL</strong></td>
+      <td class="mono" style="text-align:right">${Number(totalVol).toLocaleString('es-MX',{maximumFractionDigits:2})}</td>
+      <td class="mono" style="text-align:right">${fmt(totalMonto)}</td>
+      <td></td>
+    </tr></tfoot>
+  </table></div>`;
+}
+
+// ── Función genérica para renderizar CUALQUIERA de las 3 matrices ─────────────
+// ejeKeys: array de IDs para las filas (técnicos / activos / instalaciones)
+// ejeLabel(id): función que devuelve la etiqueta de la fila
+// getEjeId(registro): función que extrae el ID del eje desde un registro
+function renderizarMatriz(registros, ejeKeys, ejeLabel, getEjeId, contenedorId) {
+  const el = document.getElementById(contenedorId);
+
+  if (registros.length === 0) {
+    el.innerHTML = '<div class="loading">Sin registros en este período</div>';
+    return;
+  }
+
+  // Recoger partidas que tienen registros en este período
+  const partidaIdsUsadas = [...new Set(registros.map(r => r.id_partida))];
+  // Ordenar por código de partida
+  const partidasUsadas = partidaIdsUsadas
+    .map(id => G.partidaIdx[id] || { id, codigo_partida: '?', concepto_pnd: '' })
+    .sort((a, b) => (a.codigo_partida || '').localeCompare(b.codigo_partida || ''));
+
+  // Filas: solo ejes que tienen al menos un registro
+  const ejesConRegistro = [...new Set(registros.map(r => getEjeId(r)))];
+  const ejesFiltrados = ejeKeys.filter(k => ejesConRegistro.includes(k));
+
+  // Acumular monto y volumen por [ejeId][partidaId]
+  const data = {}; // data[ejeId][partidaId] = { monto, volumen }
+  const totalesEje = {}; // totalesEje[ejeId] = { monto, volumen }
+  const totalesPartida = {}; // totalesPartida[partidaId] = { monto, volumen }
+  let totalGeneral = { monto: 0, volumen: 0 };
+
+  registros.forEach(r => {
+    const ejeId = getEjeId(r);
+    const pid = r.id_partida;
+    if (!data[ejeId]) data[ejeId] = {};
+    if (!data[ejeId][pid]) data[ejeId][pid] = { monto: 0, volumen: 0 };
+    data[ejeId][pid].monto   += Number(r.monto || 0);
+    data[ejeId][pid].volumen += Number(r.cantidad || 0);
+
+    if (!totalesEje[ejeId]) totalesEje[ejeId] = { monto: 0, volumen: 0 };
+    totalesEje[ejeId].monto   += Number(r.monto || 0);
+    totalesEje[ejeId].volumen += Number(r.cantidad || 0);
+
+    if (!totalesPartida[pid]) totalesPartida[pid] = { monto: 0, volumen: 0 };
+    totalesPartida[pid].monto   += Number(r.monto || 0);
+    totalesPartida[pid].volumen += Number(r.cantidad || 0);
+
+    totalGeneral.monto   += Number(r.monto || 0);
+    totalGeneral.volumen += Number(r.cantidad || 0);
+  });
+
+  // Encabezados de columnas (partidas)
+  const encabezados = partidasUsadas.map(p =>
+    `<th class="partida-col" title="${p.concepto_pnd||''}">${p.codigo_partida||'?'}</th>`
+  ).join('');
+
+  // Filas de datos
+  const filas = ejesFiltrados.map(ejeId => {
+    const label = ejeLabel(ejeId);
+    const celdas = partidasUsadas.map(p => {
+      const cell = (data[ejeId]||{})[p.id];
+      if (!cell || cell.monto === 0) {
+        return `<td class="cell-empty">—</td>`;
+      }
+      return `<td class="cell-data">
+        <span class="cell-monto">${fmt(cell.monto)}</span>
+        <span class="cell-vol">${Number(cell.volumen).toLocaleString('es-MX',{maximumFractionDigits:2})}</span>
+      </td>`;
+    }).join('');
+    const tot = totalesEje[ejeId] || { monto: 0, volumen: 0 };
+    return `<tr>
+      <td class="row-label">${label}</td>
+      ${celdas}
+      <td class="cell-data total-col">
+        <span class="cell-monto">${fmt(tot.monto)}</span>
+        <span class="cell-vol">${Number(tot.volumen).toLocaleString('es-MX',{maximumFractionDigits:2})}</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Fila de totales
+  const celdaTotal = partidasUsadas.map(p => {
+    const tot = totalesPartida[p.id] || { monto: 0, volumen: 0 };
+    return `<td class="cell-data total-col">
+      <span class="cell-monto">${fmt(tot.monto)}</span>
+      <span class="cell-vol">${Number(tot.volumen).toLocaleString('es-MX',{maximumFractionDigits:2})}</span>
+    </td>`;
+  }).join('');
+
+  el.innerHTML = `<div class="matriz-wrap"><table class="matriz-table">
+    <thead><tr>
+      <th>—</th>${encabezados}<th class="partida-col total-col">TOTAL</th>
+    </tr></thead>
+    <tbody>${filas}</tbody>
+    <tfoot><tr class="total-row">
+      <td class="row-label">TOTAL</td>
+      ${celdaTotal}
+      <td class="cell-data total-col">
+        <span class="cell-monto">${fmt(totalGeneral.monto)}</span>
+        <span class="cell-vol">${Number(totalGeneral.volumen).toLocaleString('es-MX',{maximumFractionDigits:2})}</span>
+      </td>
+    </tr></tfoot>
+  </table></div>`;
+}
+
+// ── 2. MATRIZ TÉCNICO × PARTIDA ─────────────────────────────────────────────
+function renderizarMatrizTecnico(registros) {
+  const ejeKeys = G.tecnicos.map(t => t.id);
+  const ejeLabel = id => {
+    const t = G.tecnicoIdx[id] || {};
+    return (t.nombre_completo || t.num_colaborador || id);
+  };
+  const getEjeId = r => r.id_tecnico;
+  renderizarMatriz(registros, ejeKeys, ejeLabel, getEjeId, 'tabla-matriz-tecnico');
+}
+
+// ── 3. MATRIZ ACTIVO × PARTIDA ───────────────────────────────────────────────
+function renderizarMatrizActivo(registros) {
+  const ejeKeys = G.activos.map(a => a.id);
+  const ejeLabel = id => {
+    const a = G.activoIdx[id] || {};
+    return a.nombre || String(id);
+  };
+  const getEjeId = r => r.id_activo;
+  renderizarMatriz(registros, ejeKeys, ejeLabel, getEjeId, 'tabla-matriz-activo');
+}
+
+// ── 4. MATRIZ INSTALACIÓN × PARTIDA ─────────────────────────────────────────
+function renderizarMatrizInstalacion(registros) {
+  // Solo instalaciones presentes en los registros del período
+  const instIds = [...new Set(registros.map(r => r.id_instalacion))];
+  const ejeLabel = id => {
+    const i = G.instalacionIdx[id] || {};
+    return i.nombre || String(id);
+  };
+  const getEjeId = r => r.id_instalacion;
+  renderizarMatriz(registros, instIds, ejeLabel, getEjeId, 'tabla-matriz-instalacion');
 }
 
 // cargarDatos() se llama después de un login exitoso, ver hacerLoginAdmin()
